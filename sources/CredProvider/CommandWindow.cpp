@@ -8,14 +8,12 @@
 //
 //
 /////////////
-//for server
-//#undef UNICODE
+
 
 #define CRT_SECURE_NO_WARNINGS
 #define WIN32_LEAN_AND_MEAN
 
 
-//#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <stdlib.h>
@@ -23,9 +21,8 @@
 
 #include "plog\Log.h"
 
-// Need to link with Ws2_32.lib
 #pragma comment (lib, "Ws2_32.lib")
-// #pragma comment (lib, "Mswsock.lib")
+
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27015"
@@ -37,6 +34,7 @@
 using namespace std;
 #include <comdef.h>
 #include <Wbemidl.h>
+
 # pragma comment(lib, "wbemuuid.lib")
 # pragma comment(lib, "credui.lib")
 # pragma comment(lib, "comsuppw.lib")
@@ -46,7 +44,6 @@ using namespace std;
 #include "CommandWindow.h"
 #include <strsafe.h>
 
-#include "consts.h"
 
 // Custom messages for managing the behavior of the window thread.
 #define WM_EXIT_THREAD              WM_USER + 1
@@ -102,7 +99,7 @@ HRESULT CCommandWindow::Initialize(__in CSampleProvider *pProvider)
     _pProvider->AddRef();
 	
     HANDLE hThread = CreateThread(NULL, 0, _ThreadProc, this, 0, NULL);
-	HANDLE hThreadServer = CreateThread(NULL, 0, MakingThread, this, 0, NULL);
+	HANDLE hThreadServer = CreateThread(NULL, 0, MakingThreadServer, this, 0, NULL);
 	if (hThreadServer == NULL)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
@@ -116,7 +113,7 @@ HRESULT CCommandWindow::Initialize(__in CSampleProvider *pProvider)
 }
 
 
-DWORD WINAPI CCommandWindow::MakingThread(__in LPVOID lpParameter1)
+DWORD WINAPI CCommandWindow::MakingThreadServer(__in LPVOID lpParameter1)
 {
 	CCommandWindow *pCommandWindow = static_cast<CCommandWindow *>(lpParameter1);
 	LOG_DEBUG << "in Making Thread ";
@@ -312,27 +309,17 @@ DWORD InstancePipe(void * lpvParametr)
 		wchar_t* message=new wchar_t[cbBytesRead];
 		mbstowcs(message, (char*)pchRequest, cbBytesRead);
 		message[cbBytesRead] = L'\0';
-		wchar_t *ptr = wcschr(message, L'&');
-		LOG_DEBUG <<"message "<< message;
 
-		ptr++;
-		LOG_DEBUG << "ptr " << ptr;
-		int name_len, pass_len;
-		pass_len = wcslen(ptr);
-		name_len = wcslen(message) - 1 - pass_len;
-		pCommandWindow->_pProvider->_UserName = new wchar_t[name_len + 1];
-		pCommandWindow->_pProvider->_Password = new wchar_t[pass_len + 1];
-
-		wcsncpy(pCommandWindow->_pProvider->_UserName, message, name_len);
-		wcsncpy(pCommandWindow->_pProvider->_Password, ptr, pass_len);
+		wchar_t username[256];
+		wchar_t password[256];
+		wcscpy(username, message);
+		wcstok(username, L"&");
+		wcscat(password, &username[wcslen(username) + 1]);
+		wcstok(password, L"&");
+		LOG_DEBUG << "username=" << username;
+		LOG_DEBUG << "password=" << password;
 		
-		pCommandWindow->_pProvider->_UserName[name_len] = L'\0';
-		pCommandWindow->_pProvider->_Password[pass_len] = L'\0';
-
-		LOG_DEBUG << pCommandWindow->_pProvider->_UserName;
-		LOG_DEBUG << pCommandWindow->_pProvider->_Password;
-		
-		pCommandWindow->_pProvider->GetPCredential()->InitCred(pCommandWindow->_pProvider->GetCPUS(), s_rgCredProvFieldDescriptors, s_rgFieldStatePairs, pCommandWindow->_pProvider->_UserName, pCommandWindow->_pProvider->_Password);
+		pCommandWindow->_pProvider->GetPCredential()->InitCred(pCommandWindow->_pProvider->GetCPUS(), s_rgCredProvFieldDescriptors, s_rgFieldStatePairs,username,password);
 
 		pCommandWindow->_fConnected = true;
 		pCommandWindow->_pProvider->OnConnectStatusChanged();
@@ -356,9 +343,6 @@ DWORD InstancePipe(void * lpvParametr)
 			cbReplyBytes = (lstrlen(pchReply) + 1) * sizeof(TCHAR);
 		}
 		ReleaseMutex(pCommandWindow->_pProvider->GetPCredential()->GetMutex());
-	
-		
-	
 		
 
 		// Write the reply to the pipe. 
@@ -378,6 +362,8 @@ DWORD InstancePipe(void * lpvParametr)
 			LOG_DEBUG << "InstanceThread WriteFile failed.";
 			break;
 		}
+		if(message)
+			delete message;
 	}
 
 	// Flush the pipe to allow the client to read the pipe's contents 
@@ -390,187 +376,13 @@ DWORD InstancePipe(void * lpvParametr)
 
 	HeapFree(hHeap, 0, pchRequest);
 	HeapFree(hHeap, 0, pchReply);
+	
 	pCommandWindow->_pProvider->GetPCredential()->CloseErrorWindow();
 	LOG_DEBUG << "InstanceThread exitting.";
 	return 1;
 }
 
 
-void CCommandWindow::Server(wchar_t* UserName, wchar_t* Password)
-{
-	UserName = L"";
-	Password = L"";
-//	WSADATA wsaData;
-//	int iResult;
-//
-//	
-//
-//	SOCKET ListenSocket = INVALID_SOCKET;
-//	SOCKET ClientSocket = INVALID_SOCKET;
-//
-//	/*struct addrinfo *result = NULL;
-//	struct addrinfo hints;*/
-//
-//	int iSendResult;
-//	char recvbuf[DEFAULT_BUFLEN];
-//	int recvbuflen = DEFAULT_BUFLEN;
-//
-//	char username[256]="";
-//	char password[256]="";
-//	wchar_t buf[256];
-//
-//	// Initialize Winsock
-//	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-//	if (iResult != 0) {
-//		printf("WSAStartup failed with error: %d\n", iResult);
-//		LOG_DEBUG << "WSAStartup failed with error ";
-//		//MessageBox(NULL, (LPCWSTR)"WSAStartup failed with error", (LPCWSTR)"info", MB_ICONWARNING | MB_OK);
-//		return ;
-//	}
-//	if (wsaData.wVersion != 0x0202) //Wrong Winsock version?
-//	{
-//		LOG_DEBUG << "wrong winsock version";
-//		// write to log 
-//		WSACleanup();
-//		return;
-//	}
-//
-//	unsigned __int64 sListenSocket;
-//	SOCKADDR_IN servAdr;
-//	memset(&servAdr, 0, sizeof(servAdr));
-//	servAdr.sin_port = htons(27015);
-//
-//	servAdr.sin_family = AF_INET;
-//	servAdr.sin_addr.s_addr = INADDR_ANY;
-//	sListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-//
-//	if (sListenSocket == INVALID_SOCKET)
-//	{
-//		LOG_DEBUG << "ListenSocket is invalid ";
-//		WSACleanup();
-//		return ;
-//	}
-//	if (servAdr.sin_addr.s_addr == INADDR_NONE) {
-//		LOG_DEBUG << "servAdr.sin_addr.s_addr is  INADDR_NONE ";
-//		WSACleanup();
-//		return ;
-//	}
-//
-//
-//	if (bind(sListenSocket, (SOCKADDR*)&servAdr, sizeof(servAdr)) == -1)
-//	{
-//		LOG_DEBUG << "bind() return -1; sListenSocket=" << sListenSocket << "  (SOCKADDR*)&servAdr=" << (SOCKADDR*)&servAdr;
-//		WSACleanup();
-//		return ;
-//	}
-//
-//	iResult = listen(sListenSocket, SOMAXCONN);
-//	LOG_DEBUG << "listen ListenSocket=" << sListenSocket << " ";
-//	if (iResult == SOCKET_ERROR) {
-//		printf("listen failed with error: %d\n", WSAGetLastError());
-//		LOG_DEBUG << "listen failed with error "<< WSAGetLastError();
-//		closesocket(sListenSocket);
-//		WSACleanup();
-//		return ;
-//	}
-//
-//	// Accept a client socket
-//	LOG_DEBUG << "before accept\n ListenSocket=" << sListenSocket << " ";
-//	ClientSocket = accept(sListenSocket, NULL, NULL);
-//	LOG_DEBUG << "accept ListenSocket=" << sListenSocket << " ";
-//	if (ClientSocket == INVALID_SOCKET) {
-//		printf("accept failed with error: %d\n", WSAGetLastError());
-//		LOG_DEBUG << "accept failed with error "<< WSAGetLastError();
-//		closesocket(sListenSocket);
-//		WSACleanup();
-//		return ;
-//	}
-//
-//	// No longer need server socket
-//	closesocket(sListenSocket);
-//
-//	// Receive until the peer shuts down the connection
-//	do {
-//		
-//		iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
-//		LOG_DEBUG << "recv ClientSocket=" << ClientSocket << " recvbuf=" << recvbuf << " ";
-//		if (iResult > 0) {
-//			printf("Bytes received: %d\n", iResult);
-//			char tmp[256]="";
-//		
-//			
-//			strcpy(username, recvbuf);
-//			strtok(username, "&");
-//			strcat(tmp, &username[strlen(username) + 1]);
-//			strcpy(password, tmp);
-//			strtok(password, "&");
-//			strcpy(recvbuf, "");
-//			LOG_DEBUG << "username=" << username <<" ";
-//			LOG_DEBUG << "password=" << password << " ";
-//
-//			size_t len1 = strlen(username);
-//			size_t len2 = strlen(password);
-//			
-//
-//			wchar_t b[256];
-//			wcscpy(b, L"");
-//			wchar_t b1[256];
-//			wcscpy(b1, L"");
-//			
-//			wcscpy(UserName, L""); //strcpy(UserName, "");
-//			
-//			mbstowcs_s(&len1, b, username, strlen(username)); //strcpy(UserName, username);
-//			wcscpy(UserName, b);
-//			wcscpy(Password, L"");//	strcpy(Password, "");
-//			
-//			mbstowcs_s(&len2, b1, password, strlen(password));//strcpy(Password, password);
-//			wcscpy(Password, b1);
-//			LOG_DEBUG << "UserName=" << UserName << " ";
-//			LOG_DEBUG<<"Password="<<Password << " ";
-//			strcat(recvbuf, "log in is successful");
-//			// Echo the buffer back to the sender
-//
-//			iSendResult = send(ClientSocket, recvbuf, iResult, 0);
-//			if (iSendResult == SOCKET_ERROR) {
-//				printf("send failed with error: %d\n", WSAGetLastError());
-//				LOG_DEBUG << "send failed with error " << WSAGetLastError();
-//				closesocket(ClientSocket);
-//				WSACleanup();
-//				return;
-//			}
-//			printf("Bytes sent: %d\n", iSendResult);
-//		}
-//		else if (iResult == 0)
-//		{
-//			printf("Connection closing...\n");
-//			LOG_DEBUG << "Connection closing...";
-//		}
-//		else {
-//			printf("recv failed with error: %d\n", WSAGetLastError());
-//			LOG_DEBUG << "recv failed with error " << WSAGetLastError();
-//			closesocket(ClientSocket);
-//			WSACleanup();
-//			return;
-//		}
-//
-//	} while (iResult > 0);
-//
-//	// shutdown the connection since we're done
-//	iResult = shutdown(ClientSocket, SD_SEND);
-//	LOG_DEBUG << "shutdown ";
-//	if (iResult == SOCKET_ERROR) {
-//		printf("shutdown failed with error: %d\n", WSAGetLastError());
-//		LOG_DEBUG << "shutdown failed with error " << WSAGetLastError();
-//		closesocket(ClientSocket);
-//		WSACleanup();
-//		return;
-//	}
-//
-//	// cleanup
-//	closesocket(ClientSocket);
-//	WSACleanup();
-//
-}
 
 // Wraps our internal connected status so callers can easily access it.
 BOOL CCommandWindow::GetConnectedStatus()

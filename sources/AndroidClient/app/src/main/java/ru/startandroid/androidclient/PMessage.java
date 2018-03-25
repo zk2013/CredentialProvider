@@ -5,7 +5,7 @@ package ru.startandroid.androidclient;
  */
 
 public class PMessage {
-    private int ID;
+
     public PMessage(){}
     public int GetID()
     {
@@ -16,5 +16,7 @@ public class PMessage {
     {
         this.ID=id;
     }
+
+    private int ID;
 
 }

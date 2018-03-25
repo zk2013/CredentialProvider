@@ -85,9 +85,7 @@ public:
 		__out CREDENTIAL_PROVIDER_STATUS_ICON* pcpsiOptionalStatusIcon);
 
 public:
-	HRESULT Initialize(__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
-		__in const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR* rgcpfd,
-		__in const FIELD_STATE_PAIR* rgfsp);
+	
 	CSampleCredential();
 	bool GetIncorrectCreds();
 	HANDLE GetMutex();
@@ -120,10 +118,11 @@ private:
 	ICredentialProviderCredentialEvents* _pCredProvCredentialEvents;
 	PWSTR* StatusText;
 	CREDENTIAL_PROVIDER_STATUS_ICON * StatusIcon;
-	void SetErrorWindow(PWSTR* ppwszOptionalStatusText1, CREDENTIAL_PROVIDER_STATUS_ICON* pcpsiOptionalStatusIcon1);
-
 	BOOL incorrectCreds;
 	HANDLE mutex;
+
+	void SetErrorWindow(PWSTR* ppwszOptionalStatusText1, CREDENTIAL_PROVIDER_STATUS_ICON* pcpsiOptionalStatusIcon1);
+
 	
 	
 };
