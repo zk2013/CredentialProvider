@@ -1,212 +1,166 @@
 package ru.startandroid.androidclient;
 
+import android.content.DialogInterface;
 import android.os.AsyncTask;
-import android.os.Looper;
-import android.security.keystore.KeyProperties;
 import android.support.design.widget.TextInputLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
-import java.security.AlgorithmParameters;
-import java.security.Key;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.SecureRandom;
-import java.security.spec.AlgorithmParameterSpec;
-import java.util.BitSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
-
+    AlertDialog alert;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Status");
+        builder.setCancelable(false);
+        builder.setNeutralButton("Understood", new DialogInterface.OnClickListener() {public void onClick(DialogInterface dialog, int id) {
+                                dialog.cancel();}});
+        alert = builder.create();
     }
-    byte[] cryptdata=null;
-    String serIpAddress;       // адрес сервера
-    String username;
-    String password;
-    String msg;                 // Сообщение
-    String code;
 
-    EditText ipEdit, unEdit;
-    TextInputLayout pwEdit;
-    Button authorization;
     public void MyonClick(View view)
     {
-        String incorrectData="";
-        ipEdit=(EditText)findViewById(R.id.editText5);
-        serIpAddress = ipEdit.getText().toString();
+        String check="Correct";
 
-        unEdit=(EditText)findViewById(R.id.editText6);
-        username=unEdit.getText().toString();
-
+        button=(Button)findViewById(R.id.button);
         pwEdit=(TextInputLayout)findViewById(R.id.textInputLayout);
         password=pwEdit.getEditText().getText().toString();
 
-        int i=0,num,count;
-        boolean flag=false;
-        Toast msgToast;
-        if (serIpAddress.isEmpty())
-        {
-           incorrectData="Введите ip адрес";
-        }
-        Pattern p=Pattern.compile("([0-9]{1,3}\\.){3}[0-9]{1,3}");
-        String [] splits=serIpAddress.split("\\.");
-        count=splits.length-1;
-        while(!flag&&i<splits.length)
-        {
-            num=Integer.parseInt(splits[i]);
-            if(num>256)
-                flag=true;
-            ++i;
-        }
-        Matcher m=p.matcher(serIpAddress);
+        ipTextEdit=(TextInputLayout)findViewById(R.id.textInputLayout2);
+        serIpAddress=ipTextEdit.getEditText().getText().toString();
 
-        if(!m.matches()&&!flag)
-            incorrectData="Неверный формат ip адреса";
+        unTextEdit=(TextInputLayout)findViewById(R.id.textInputLayout3);
+        username=unTextEdit.getEditText().getText().toString();
 
-        Pattern p1=Pattern.compile("((.*[\\(\\;\\:\\[\\]\\'\\(\\)\\/\\,\\+\\*\\?\\<\\>\\)]+))");
-        Matcher m1=p1.matcher(username);
 
-        if(incorrectData.isEmpty())
+        boolean fCorrectData=true;
+        String error_ip=null;
+        String error_username=null;
+        String error_password=null;
+
+        CheckOnCorrect checkOnCorrect=new CheckOnCorrect();
+        error_ip=checkOnCorrect.CorrectIP(serIpAddress);
+        if(error_ip!=check)
         {
-            if (username.isEmpty())
-                incorrectData="Введите username";
-            if(username.length()>20)
-                incorrectData="Слишком длинное имя";
-            if(m1.lookingAt())
-                incorrectData="Неверный формат логина";
+            ipTextEdit.setErrorEnabled(true);
+            ipTextEdit.setError(error_ip);
+            fCorrectData=false;
 
         }
+        else
+            ipTextEdit.setErrorEnabled(false);
 
-        m1=p1.matcher(password);
-       if(incorrectData.isEmpty()) {
-           if (password.isEmpty())
-               incorrectData="Введите password";
-           if(password.length()>128)
-               incorrectData="Слишком длинный пароль";
-           if(m1.lookingAt())
-               incorrectData="Неверный формат пароль";
-       }
-       msg=username+"&"+password;
-        if(!incorrectData.isEmpty())
+        error_username=checkOnCorrect.CorrectUsername(username);
+        if(error_username!=check)
         {
-            msgToast = Toast.makeText(this, incorrectData, Toast.LENGTH_LONG);
-            msgToast.show();
+            unTextEdit.setErrorEnabled(true);
+            unTextEdit.setError(error_username);
+            fCorrectData=false;
+        }
+        else
+            unTextEdit.setErrorEnabled(false);
+        error_password=checkOnCorrect.CorrectPassword(password);
+        if(error_password!=check)
+        {
+            pwEdit.setErrorEnabled(true);
+            pwEdit.setError(error_password);
+            fCorrectData=false;
+        }
+        else
+            pwEdit.setErrorEnabled(false);
+
+
+        if(!fCorrectData)
             return;
+        else
+        {
+            msg=username+"&"+password;
+            DataEncrypt encrypt=new DataEncrypt();
+            cryptdata=encrypt.CryptingData(msg);
+
+            String sizeCrypt=String.valueOf(cryptdata.length);
+            String beforeCryp=String.valueOf(msg.length());
+            SenderThread sender = new SenderThread();
+            sender.execute(sizeCrypt,serIpAddress,beforeCryp);
         }
 
-
-        cryptdata=CryptingData(msg);
-        String sizeCrypt=String.valueOf(cryptdata.length);
-        String beforeCryp=String.valueOf(msg.length());
-        SenderThread sender = new SenderThread(); // объект представляющий поток отправки сообщений
-        sender.execute(sizeCrypt,serIpAddress,beforeCryp);
     }
 
-    public byte[] CryptingData(String text)
-    {
-        // Original text
-        String theTestText = text;
+   void ShowMessage(String mes)
+   {
+       Toast msgToast = Toast.makeText(this, mes, Toast.LENGTH_SHORT);
+       msgToast.show();
+   }
 
-        Toast msgToast;
 
-        SecretKeySpec sks = null;
-        try {
-
-            sks = new SecretKeySpec("passworddrowssap".getBytes(), "AES");
-        } catch (Exception e) {
-            msgToast = Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT);
-            msgToast.show();
-        }
-
-        // Encode the original data with AES
-        byte[] encodedBytes = null;
-        try {
-
-            Cipher c = Cipher.getInstance("AES");
-            c.init(Cipher.ENCRYPT_MODE, sks);
-            encodedBytes = c.doFinal(theTestText.getBytes("UTF8"));
-        } catch (Exception e) {
-            msgToast = Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT);
-            msgToast.show();
-        }
-       // msgToast = Toast.makeText(this, "[ENCODED]:\n" +
-         //     Base64.encodeToString(encodedBytes, Base64.DEFAULT), Toast.LENGTH_SHORT);
-        //msgToast.show();
-        return  encodedBytes;
-    }
-
-    class SenderThread extends AsyncTask<String, String, Void>
+    class SenderThread extends AsyncTask<String, String, Integer>
     {
         private int port = 27015;
+        private PMessage pMessage;
+        private PMessage1 pMessage1;
+
         @Override
-        protected Void doInBackground(String... params) {
+        protected void onPreExecute() {
+            super.onPreExecute();
+           button.setEnabled(false);
+        }
+
+
+        @Override
+        protected Integer doInBackground(String... params) {
             String outipAddress=null;
             String sizeCrypt=null;
             int beforeCr=0;
+            int rez=1;
             if(params.length==3) {
                 sizeCrypt = params[0];
                 outipAddress=params[1];
                 beforeCr=Integer.parseInt(params[2]);
             }
             try {
-                int i=1;
+                int i=ConstValues.Request;
                 String str;
-                PMessage pMessage=new PMessage();
-                PMessage1 pMessage1=new PMessage1();
+
+                pMessage=new PMessage();
+                pMessage1=new PMessage1();
                 // ip адрес сервера
                 InetAddress ipAddress = InetAddress.getByName(outipAddress);
                 // Создаем сокет
                 InetSocketAddress inetSocketAddress=new InetSocketAddress(ipAddress,port);
                 Socket socket=new Socket();
-                socket.connect(inetSocketAddress,3000);
-                //Socket socket = new Socket(ipAddress, port);
+                socket.connect(inetSocketAddress,ConstValues.TimeOut);
+
                 // Получаем потоки ввод/вывода
                 OutputStream outputStream = socket.getOutputStream();
                 InputStream inputStream= socket.getInputStream();
                 DataOutputStream out = new DataOutputStream(outputStream);
                 DataInputStream in=new DataInputStream(inputStream);
 
-               /* byte[] outMsg = null;
-                outMsg = msg.getBytes("UTF8");
-                out.write(outMsg);*/
-
                 boolean finish=false;
                 do {
                     byte[] outMsg = null;
                     switch (i) {
-                        case 1:
+                        case ConstValues.Request:
                             str = "1";
                             outMsg = str.getBytes("UTF8");
                             out.write(outMsg);
                             break;
 
-                        case 2:
+                        case ConstValues.SendCreds:
                             str="4";
                             if(Integer.parseInt(sizeCrypt)<10)
                                 str += "00";
@@ -223,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
                             out.write(cryptdata);
                             break;
                     }
-                    String answer;
+
                     byte[] buffer = new byte[1024 * 4];
                     int count;
                     count = in.read(buffer, 0, buffer.length);
@@ -231,49 +185,78 @@ public class MainActivity extends AppCompatActivity {
                             SetClassFileds(count,buffer,pMessage,pMessage1);
 
                         switch (pMessage.GetID()) {
-                            case 2:
-                                answer = pMessage1.GetData();
-                                publishProgress(answer);
+                            case ConstValues.ReadingError:
+                                rez=ConstValues.ReadingError;
+                                break;
+                            case ConstValues.UserInSystem:
+                                rez=ConstValues.UserInSystem;
                                 finish=true;
                                 break;
-                            case 3:
-                                i = 2;
-                                answer = "Sending credentials";
-                                publishProgress(answer);
+                            case ConstValues.Free:
+                                i=ConstValues.SendCreds;
                                 break;
-                            case 5:
-                                answer = "Incorrect login or password.\n Try again";
-                                publishProgress(answer);
-                                break;
-                            case 6:
-                                answer = "Login is successful";
+                            case ConstValues.IncorrectCreds:
+                                rez=ConstValues.IncorrectCreds;
                                 finish=true;
-                                publishProgress(answer);
+                                break;
+                            case ConstValues.SuccessfulLogging:
+                                rez=ConstValues.SuccessfulLogging;
+                                finish=true;
                                 break;
                         }
 
                     }
                 }while(!finish);
-              /*  byte[] buffer = new byte[1024 * 4];
-                int count;
-                count = in.read(buffer, 0, buffer.length);
-                publishProgress(new String(buffer));*/
                 socket.close();
             }
             catch (Exception ex)
             {
-                publishProgress(ex.getMessage());
-                return null;
+                pMessage1.SetData(ex.getMessage());
+                return ConstValues.Error;
             }
-            return null;
+            return rez;
         }
 
         @Override
-        protected void onProgressUpdate(String ... m) {
-            super.onProgressUpdate(m);
-
-            Toast  msgToast = Toast.makeText(getApplicationContext(), m[0], Toast.LENGTH_LONG);
-            msgToast.show();
+        protected void onPostExecute(Integer result) {
+            super.onPostExecute(result);
+            alert.setTitle("Status");
+            if(result==ConstValues.IncorrectCreds)
+            {
+                alert.setMessage("Incorrect username or password");
+                alert.setIcon(android.R.drawable.ic_notification_clear_all);
+                alert.show();
+            }
+            if(result==ConstValues.SuccessfulLogging)
+            {
+                alert.setMessage("Log in is successful");
+                alert.setIcon(android.R.drawable.ic_menu_info_details);
+                alert.show();
+            }
+            if(result==ConstValues.UserInSystem)
+            {
+                alert.setMessage("User "+pMessage1.GetData()+" is already logged in");
+                alert.setIcon(android.R.drawable.ic_menu_info_details);
+                alert.show();
+            }
+            if(result==ConstValues.Error)
+            {
+                alert.setTitle("Error");
+                alert.setIcon(android.R.drawable.ic_notification_clear_all);
+                alert.setMessage(pMessage1.GetData());
+                alert.show();
+            }
+            if(result==ConstValues.ReadingError)
+            {
+                alert.setTitle("Error");
+                alert.setIcon(android.R.drawable.ic_notification_clear_all);
+                alert.setMessage("Error with reading message");
+                alert.show();
+            }
+            button.setEnabled(true);
+            ipTextEdit.getEditText().setText("");
+            unTextEdit.getEditText().setText("");
+            pwEdit.getEditText().setText("");
         }
 
         private void SetClassFileds(int size,byte[] text, PMessage pMes,PMessage1 pMes1)
@@ -285,13 +268,22 @@ public class MainActivity extends AppCompatActivity {
                 if(size==7+pMes1.GetLenMessage())
                     pMes1.SetData(new String(text, 7, pMes1.GetLenMessage()));
                 else
-                    pMes1.SetData("При приеме сообщения возникли какие-то ошибки");
+                    pMes1.SetData("There were some troubles with receiving message");
             }
 
             pMes.SetID(Integer.parseInt(new String(text,0,1)));
         }
     }
+    private byte[] cryptdata=null;
+    private String serIpAddress;
+    private String username;
+    private String password;
+    private String msg;
 
+    private TextInputLayout pwEdit;
+    private TextInputLayout ipTextEdit;
+    private TextInputLayout unTextEdit;
+    private Button button;
 }
 
 
