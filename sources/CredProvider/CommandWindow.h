@@ -31,9 +31,8 @@ public:
     HRESULT Initialize(__in CSampleProvider *pProvider);
     BOOL GetConnectedStatus();
 
-	static DWORD WINAPI MakingThread(__in LPVOID lpParameter1);
+	static DWORD WINAPI MakingThreadServer(__in LPVOID lpParameter1);
 
-	void Server(wchar_t*, wchar_t*);
 	
 	
 	CSampleProvider            *_pProvider;        // Pointer to our owner.

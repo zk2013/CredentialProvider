@@ -15,10 +15,8 @@
 #include <unknwn.h>
 #include "CSampleCredential.h"
 #include "guid.h"
-#include "consts.h"
 #include "plog\Log.h"
 
-// CSampleCredential ////////////////////////////////////////////////////////
 
 CSampleCredential::CSampleCredential() :
 	_cRef(1),
@@ -35,7 +33,6 @@ CSampleCredential::CSampleCredential() :
 
 CSampleCredential::~CSampleCredential()
 {
-	LOG_DEBUG << "Start in ~CSampleCredential ";
 	if (_rgFieldStrings[SFI_PASSWORD])
 	{
 		size_t lenPassword = lstrlen(_rgFieldStrings[SFI_PASSWORD]);
@@ -47,55 +44,15 @@ CSampleCredential::~CSampleCredential()
 		CoTaskMemFree(_rgCredProvFieldDescriptors[i].pszLabel);
 	}
 	if (StatusText)
-	{
 		delete StatusText;
+	if (StatusIcon)
 		delete StatusIcon;
-	}
 	DllRelease();
-	LOG_DEBUG << "Finish in ~CSampleCredential ";
 }
 
 
 
 // Initializes one credential with the field information passed in.
-// Set the value of the SFI_USERNAME field to pwzUsername.
-HRESULT CSampleCredential::Initialize(
-	__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
-	__in const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR* rgcpfd,
-	__in const FIELD_STATE_PAIR* rgfsp
-)
-{
-	HRESULT hr = S_OK;
-	LOG_DEBUG << "Start in Initialize";
-	_cpus = cpus;
-
-	// Copy the field descriptors for each field. This is useful if you want to vary the field
-	// descriptors based on what Usage scenario the credential was created for.
-	for (DWORD i = 0; SUCCEEDED(hr) && i < ARRAYSIZE(_rgCredProvFieldDescriptors); i++)
-	{
-		_rgFieldStatePairs[i] = rgfsp[i];
-		hr = FieldDescriptorCopy(rgcpfd[i], &_rgCredProvFieldDescriptors[i]);
-	}
-	
-	if (SUCCEEDED(hr))
-	{
-		hr = SHStrDupW(L"", &_rgFieldStrings[SFI_USERNAME]);
-		LOG_DEBUG << "_rgFieldStrings[SFI_USERNAME]=" << _rgFieldStrings[SFI_USERNAME];
-	}
-	if (SUCCEEDED(hr))
-	{
-		hr = SHStrDupW(L"", &_rgFieldStrings[SFI_PASSWORD]);
-		LOG_DEBUG << " _rgFieldStrings[SFI_PASSWORD]=" << _rgFieldStrings[SFI_PASSWORD];
-	}
-	if (SUCCEEDED(hr))
-	{
-		hr = SHStrDupW(L"Submit", &_rgFieldStrings[SFI_SUBMIT_BUTTON]);
-	}
-	LOG_DEBUG << "Finish in Initialize";
-	return S_OK;
-}
-
-
 HRESULT CSampleCredential::InitCred(
 	__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
 	__in const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR* rgcpfd,
