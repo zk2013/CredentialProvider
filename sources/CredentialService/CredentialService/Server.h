@@ -134,11 +134,13 @@ struct Messages
 					{
 						LOG_DEBUG << "Incorrect username or password";
 						ID = FAIL;
+						break;
 					}
 					case PIPE_ERROR:// fail pipe
 					{
 						LOG_DEBUG << "Connection error.Pipe error.";
 						ID = ERROR;
+						break;
 					}
 				}
 			}

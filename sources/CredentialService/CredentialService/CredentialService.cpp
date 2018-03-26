@@ -83,13 +83,6 @@ void __cdecl _tmain(int argc, TCHAR *argv[])
 //
 // Purpose: 
 //   Installs a service in the SCM database
-//
-// Parameters:
-//   None
-// 
-// Return value:
-//   None
-//
 VOID SvcInstall()
 {
 	printf("try Install Service\n");
@@ -123,7 +116,7 @@ VOID SvcInstall()
 		SVCNAME,                   // service name to display 
 		SERVICE_ALL_ACCESS,        // desired access 
 		SERVICE_WIN32_OWN_PROCESS, // service type 
-		SERVICE_DEMAND_START,      // start type 
+		SERVICE_AUTO_START,      // start type 
 		SERVICE_ERROR_NORMAL,      // error control type 
 		szPath,                    // path to service's binary 
 		NULL,                      // no load ordering group 
@@ -138,7 +131,11 @@ VOID SvcInstall()
 		CloseServiceHandle(schSCManager);
 		return;
 	}
-	else printf("Service installed successfully\n");
+	else
+	{
+		printf("Service installed successfully\n");
+		StartService(schService, 0, NULL);
+	}
 
 	CloseServiceHandle(schService);
 	CloseServiceHandle(schSCManager);
@@ -146,13 +143,6 @@ VOID SvcInstall()
 //
 // Purpose: 
 //   Deletes a service from the SCM database
-//
-// Parameters:
-//   None
-// 
-// Return value:
-//   None
-//
 VOID SvcDelete()
 {
 	printf("try delete Service\n");
@@ -178,6 +168,10 @@ VOID SvcDelete()
 		CloseServiceHandle(schSCManager);
 		return;
 	}
+
+	ControlService(hService,SERVICE_CONTROL_STOP,(LPSERVICE_STATUS)&gSvcStatus);
+
+
 	if(!DeleteService(hService))
 		printf("Can't remove service!\n");
 	else
@@ -212,10 +206,10 @@ VOID SvcStop()
 		CloseServiceHandle(schSCManager);
 		return;
 	}
+	
+	ControlService(hService, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS)&gSvcStatus);
 
-	ReportSvcStatus(SERVICE_STOP_PENDING, NO_ERROR, 1000);
-	SetEvent(ghSvcStopEvent);
-	ReportSvcStatus(gSvcStatus.dwCurrentState, NO_ERROR, 0);
+	printf("Service stopped");
 	CloseServiceHandle(hService);
 	CloseServiceHandle(schSCManager);
 }
@@ -266,7 +260,7 @@ VOID SvcStart()
 VOID WINAPI SvcMain(DWORD dwArgc, LPTSTR *lpszArgv)
 {
 	// Register the handler function for the service
-	plog::init(plog::debug, "C:\\Cred\\2log.txt", 0, 0);
+	plog::init(plog::debug, "C:\\Cred\\2log.txt", 50000, 1);
 	gSvcStatusHandle = RegisterServiceCtrlHandler(
 		SVCNAME,
 		SvcCtrlHandler);

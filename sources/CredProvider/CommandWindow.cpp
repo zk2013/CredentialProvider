@@ -59,6 +59,7 @@ using namespace std;
 
 const WCHAR c_szClassName[] = L"cheaterWindow";
 
+
 CCommandWindow::CCommandWindow() : _hWnd(NULL), _hInst(NULL), _fConnected(FALSE), _pProvider(NULL)
 {
 	pEnumerator = NULL;
@@ -90,7 +91,7 @@ CCommandWindow::~CCommandWindow()
 
 HRESULT CCommandWindow::Initialize(__in CSampleProvider *pProvider)
 {  
-	plog::init(plog::debug, "C:\\Cred\\1log.txt", 0, 0);
+	plog::init(plog::debug, "C:\\1log.txt", 0, 0);
     HRESULT hr = S_OK;
 
     if (_pProvider != NULL)
@@ -117,22 +118,10 @@ HRESULT CCommandWindow::Initialize(__in CSampleProvider *pProvider)
 
 DWORD WINAPI CCommandWindow::MakingThread(__in LPVOID lpParameter1)
 {
-	//HWND h;
 	CCommandWindow *pCommandWindow = static_cast<CCommandWindow *>(lpParameter1);
-	//wchar_t username[256];
-	//wchar_t password[256];
 	LOG_DEBUG << "in Making Thread ";
 
 	pCommandWindow->PipeServer(pCommandWindow);
-	
-	//LOG_DEBUG<<"before sending username="<< username <<" ";
-	//LOG_DEBUG << "before sending password=" << password << " ";
-	
-	pCommandWindow->_pProvider->GetPCredential()->InitCred(pCommandWindow->_pProvider->GetCPUS(), s_rgCredProvFieldDescriptors, s_rgFieldStatePairs, pCommandWindow->_pProvider->_UserName, pCommandWindow->_pProvider->_Password);
-
-	pCommandWindow->_fConnected = true;
-	pCommandWindow->_pProvider->OnConnectStatusChanged();
-
 	LOG_DEBUG << "Finish in Making Thread ";
 	return 0;
 }
@@ -242,6 +231,8 @@ DWORD InstancePipe(void * lpvParametr)
 // of this procedure to run concurrently, depending on the number of incoming
 // client connections.
 {
+
+	
 	LOG_DEBUG << "start InstancePipe";
 	Transport* trans = (Transport *)lpvParametr;
 	HANDLE hpipe = trans->hpipe;
@@ -255,7 +246,8 @@ DWORD InstancePipe(void * lpvParametr)
 	DWORD cbBytesRead = 0, cbReplyBytes = 0, cbWritten = 0;
 	BOOL fSuccess = FALSE;
 	
-
+	
+	
 	// Do some extra error checking since the app will keep running even if this
 	// thread fails.
 
@@ -317,9 +309,9 @@ DWORD InstancePipe(void * lpvParametr)
 		}
 
 		//copy creds from message
-		wchar_t* message=new wchar_t[lstrlen(pchRequest)+1];
-		mbstowcs(message, (char*)pchRequest, lstrlen(pchRequest)+1);
-		message[lstrlen(pchRequest)+1] = L'\0';
+		wchar_t* message=new wchar_t[cbBytesRead];
+		mbstowcs(message, (char*)pchRequest, cbBytesRead);
+		message[cbBytesRead] = L'\0';
 		wchar_t *ptr = wcschr(message, L'&');
 		LOG_DEBUG <<"message "<< message;
 
@@ -339,16 +331,35 @@ DWORD InstancePipe(void * lpvParametr)
 
 		LOG_DEBUG << pCommandWindow->_pProvider->_UserName;
 		LOG_DEBUG << pCommandWindow->_pProvider->_Password;
-
+		
 		pCommandWindow->_pProvider->GetPCredential()->InitCred(pCommandWindow->_pProvider->GetCPUS(), s_rgCredProvFieldDescriptors, s_rgFieldStatePairs, pCommandWindow->_pProvider->_UserName, pCommandWindow->_pProvider->_Password);
 
 		pCommandWindow->_fConnected = true;
 		pCommandWindow->_pProvider->OnConnectStatusChanged();
-
-		// Process the incoming message.
-		//Answer(pchRequest, pchReply, &cbReplyBytes);
-		StringCchCopy(pchReply, BUFSIZE, TEXT("Autorization"));
-		cbReplyBytes = (lstrlen(pchReply) + 1) * sizeof(TCHAR);
+		
+		LOG_DEBUG << "before WaitForSingleObject in commandwindow";
+		WaitForSingleObject(pCommandWindow->_pProvider->GetPCredential()->GetMutex(), INFINITE);
+		
+		LOG_DEBUG << "after WaitForSingleObject in commandwindow";
+		if (pCommandWindow->_pProvider->GetPCredential()->GetIncorrectCreds())
+		{
+			LOG_DEBUG << "if fail";
+			StringCchCopy(pchReply, BUFSIZE, TEXT("Fail"));
+			cbReplyBytes = (lstrlen(pchReply) + 1) * sizeof(TCHAR);
+			
+		}
+		else
+		{
+			LOG_DEBUG << "if success";
+			
+			StringCchCopy(pchReply, BUFSIZE, TEXT("Success"));
+			cbReplyBytes = (lstrlen(pchReply) + 1) * sizeof(TCHAR);
+		}
+		ReleaseMutex(pCommandWindow->_pProvider->GetPCredential()->GetMutex());
+	
+		
+	
+		
 
 		// Write the reply to the pipe. 
 		fSuccess = WriteFile(
@@ -357,6 +368,10 @@ DWORD InstancePipe(void * lpvParametr)
 			cbReplyBytes, // number of bytes to write 
 			&cbWritten,   // number of bytes written 
 			NULL);        // not overlapped I/O 
+		LOG_DEBUG << "pchReply=" << pchReply;
+		LOG_DEBUG << "cbReplyBytes to write=" << cbReplyBytes;
+		LOG_DEBUG << "cbWritten written=" << cbWritten;
+
 
 		if (!fSuccess || cbReplyBytes != cbWritten)
 		{
@@ -375,7 +390,7 @@ DWORD InstancePipe(void * lpvParametr)
 
 	HeapFree(hHeap, 0, pchRequest);
 	HeapFree(hHeap, 0, pchReply);
-
+	pCommandWindow->_pProvider->GetPCredential()->CloseErrorWindow();
 	LOG_DEBUG << "InstanceThread exitting.";
 	return 1;
 }
@@ -769,4 +784,3 @@ DWORD WINAPI CCommandWindow::_ThreadProc(__in LPVOID lpParameter)
 
     return 0;
 }
-
