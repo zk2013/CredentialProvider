@@ -17,6 +17,27 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import java.net.SocketAddress;
+>>>>>>> Anastasiia's_branch
+import java.security.AlgorithmParameters;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
+import java.security.spec.AlgorithmParameterSpec;
+import java.util.BitSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+=======
+>>>>>>> Anastasiia's_branch
 
 public class MainActivity extends AppCompatActivity {
     AlertDialog alert;
@@ -84,6 +105,19 @@ public class MainActivity extends AppCompatActivity {
             pwEdit.setErrorEnabled(false);
 
 
+<<<<<<< HEAD
+        cryptdata=CryptingData(msg);
+<<<<<<< HEAD
+        String beforeCryp=String.valueOf(msg.length());
+        SenderThread sender = new SenderThread(); // объект представляющий поток отправки сообщений
+        sender.execute(msg,serIpAddress,beforeCryp);
+=======
+        String sizeCrypt=String.valueOf(cryptdata.length);
+        String beforeCryp=String.valueOf(msg.length());
+        SenderThread sender = new SenderThread(); // объект представляющий поток отправки сообщений
+        sender.execute(sizeCrypt,serIpAddress,beforeCryp);
+>>>>>>> Anastasiia's_branch
+=======
         if(!fCorrectData)
             return;
         else
@@ -98,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
             sender.execute(sizeCrypt,serIpAddress,beforeCryp);
         }
 
+>>>>>>> Anastasiia's_branch
     }
 
    void ShowMessage(String mes)
@@ -119,15 +154,54 @@ public class MainActivity extends AppCompatActivity {
            button.setEnabled(false);
         }
 
+<<<<<<< HEAD
+        // Encode the original data with AES
+        byte[] encodedBytes = null;
+        try {
+
+            Cipher c = Cipher.getInstance("AES");
+            c.init(Cipher.ENCRYPT_MODE, sks);
+            encodedBytes = c.doFinal(theTestText.getBytes("UTF8"));
+        } catch (Exception e) {
+            msgToast = Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT);
+            msgToast.show();
+        }
+<<<<<<< HEAD
+        msgToast = Toast.makeText(this, "[ENCODED]:\n" +
+              Base64.encodeToString(encodedBytes, Base64.DEFAULT), Toast.LENGTH_SHORT);
+        msgToast.show();
+=======
+       // msgToast = Toast.makeText(this, "[ENCODED]:\n" +
+         //     Base64.encodeToString(encodedBytes, Base64.DEFAULT), Toast.LENGTH_SHORT);
+        //msgToast.show();
+>>>>>>> Anastasiia's_branch
+        return  encodedBytes;
+    }
+=======
+>>>>>>> Anastasiia's_branch
 
         @Override
+<<<<<<< HEAD
+        protected Void doInBackground(String... params) {
+<<<<<<< HEAD
+            Toast msgToast=null;
+            String outtext=null;
+            String outipAddress=null;
+            String tmp=null;
+            int beforeCr=0;
+            if(params.length==3) {
+                outtext = params[0];
+=======
+=======
         protected Integer doInBackground(String... params) {
+>>>>>>> Anastasiia's_branch
             String outipAddress=null;
             String sizeCrypt=null;
             int beforeCr=0;
             int rez=1;
             if(params.length==3) {
                 sizeCrypt = params[0];
+>>>>>>> Anastasiia's_branch
                 outipAddress=params[1];
                 beforeCr=Integer.parseInt(params[2]);
             }
@@ -140,16 +214,36 @@ public class MainActivity extends AppCompatActivity {
                 // ip адрес сервера
                 InetAddress ipAddress = InetAddress.getByName(outipAddress);
                 // Создаем сокет
+<<<<<<< HEAD
+
+                Socket socket = new Socket(ipAddress, port);
+=======
                 InetSocketAddress inetSocketAddress=new InetSocketAddress(ipAddress,port);
                 Socket socket=new Socket();
+<<<<<<< HEAD
+                socket.connect(inetSocketAddress,3000);
+                //Socket socket = new Socket(ipAddress, port);
+>>>>>>> Anastasiia's_branch
+=======
                 socket.connect(inetSocketAddress,ConstValues.TimeOut);
 
+>>>>>>> Anastasiia's_branch
                 // Получаем потоки ввод/вывода
                 OutputStream outputStream = socket.getOutputStream();
                 InputStream inputStream= socket.getInputStream();
                 DataOutputStream out = new DataOutputStream(outputStream);
                 DataInputStream in=new DataInputStream(inputStream);
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+               /* byte[] outMsg = null;
+                outMsg = msg.getBytes("UTF8");
+                out.write(outMsg);*/
+
+>>>>>>> Anastasiia's_branch
+=======
+>>>>>>> Anastasiia's_branch
                 boolean finish=false;
                 do {
                     byte[] outMsg = null;
@@ -162,19 +256,33 @@ public class MainActivity extends AppCompatActivity {
 
                         case ConstValues.SendCreds:
                             str="4";
+<<<<<<< HEAD
+                            if(outtext.length()<10)
+                                str += "00";
+                            if(outtext.length()<100&&outtext.length()>=10)
+                                str+="0";
+                            str+=outtext.length();
+=======
                             if(Integer.parseInt(sizeCrypt)<10)
                                 str += "00";
                             if(Integer.parseInt(sizeCrypt)<100&&Integer.parseInt(sizeCrypt)>=10)
                                 str+="0";
                             str+=Integer.parseInt(sizeCrypt);
+>>>>>>> Anastasiia's_branch
                             if(beforeCr<10)
                                 str+="00";
                             if(beforeCr<100&&beforeCr>=10)
                                 str+="0";
+<<<<<<< HEAD
+                            str+=beforeCr+outtext;
+                            outMsg = str.getBytes("UTF8");
+                            out.write(outMsg);
+=======
                             str+=beforeCr;
                             outMsg = str.getBytes("UTF8");
                             out.write(outMsg);
                             out.write(cryptdata);
+>>>>>>> Anastasiia's_branch
                             break;
                     }
 
@@ -207,6 +315,16 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                 }while(!finish);
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+              /*  byte[] buffer = new byte[1024 * 4];
+                int count;
+                count = in.read(buffer, 0, buffer.length);
+                publishProgress(new String(buffer));*/
+>>>>>>> Anastasiia's_branch
+=======
+>>>>>>> Anastasiia's_branch
                 socket.close();
             }
             catch (Exception ex)
