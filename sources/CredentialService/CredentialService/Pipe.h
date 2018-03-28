@@ -32,8 +32,9 @@ int PipeMain(char *message)
 
 							// Break if the pipe handle is valid. 
 
-		if (hPipe != INVALID_HANDLE_VALUE)
+		if (hPipe != INVALID_HANDLE_VALUE)	
 			break;
+
 
 		// Exit if an error other than ERROR_PIPE_BUSY occurs. 
 
@@ -93,10 +94,13 @@ int PipeMain(char *message)
 			&cbRead,  // number of bytes read 
 			NULL);    // not overlapped 
 		if (!fSuccess && GetLastError() != ERROR_MORE_DATA)
+		{
+			LOG_DEBUG << "break. GLE =" << GetLastError();
 			break;
+		}
 		LOG_DEBUG << "message from credential :"<< ProviderAnswer <<". bites :"<< cbRead;
 	} while (!fSuccess);  // repeat loop if ERROR_MORE_DATA 
-
+	LOG_DEBUG << "message from credential :" << ProviderAnswer << ". bites :" << cbRead;
 	if (!fSuccess)
 	{
 		LOG_DEBUG << "ReadFile from pipe failed.";

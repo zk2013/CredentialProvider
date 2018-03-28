@@ -40,7 +40,7 @@ struct Messages
 	void InputData(char*text)
 	{
 		data = new char[LenData + 1];
-		//strncpy_s(result->data, text + 7, );
+
 		strcpy_s(data, LenData + 1, text);
 		data[LenData] = '\0';
 		if (LenOriginal > LenData)
@@ -105,7 +105,7 @@ struct Messages
 			}
 			break;
 		}
-		case 4://creds
+		case CREDS://creds
 		{
 			// check active session
 			LPTSTR ActiveSessionUserName = CheckActiveUser();
@@ -236,18 +236,22 @@ struct Messages
 	}
 	void Decrypt()
 	{
+		LOG_DEBUG << "data before decrypt: " << data;
 		unsigned char key[17] = DECRYPTION_KEY;
 		unsigned char *dec_out = new unsigned char[LenData];
 		AES_KEY dec_key;
 		AES_set_decrypt_key(key, 128, &dec_key);
-		AES_decrypt((unsigned char*)data, dec_out, &dec_key);
+		for (int i = 0; i < LenData; i += 16)
+			AES_decrypt((unsigned char*)data + i, dec_out + i, &dec_key);
 		dec_out[LenOriginal] = '\0';
 		delete[]data;
-		data = new char[LenData + 1];
+		data = new char[LenOriginal + 1];
 		strcpy_s(data, LenOriginal + 1, (char*)dec_out);
 		data[LenOriginal] = '\0';
 		delete[]dec_out;
+		LOG_DEBUG << "data after decrypt: " << data;
 	}
+
 	~Messages()
 	{
 		if(data)
@@ -394,7 +398,7 @@ DWORD WINAPI InstanceServer(void* param)
 		if (iResult > 0)
 		{
 			recvbuf[iResult] = '\0';
-			LOG_DEBUG << "Bytes received " << recvbuflen;
+			LOG_DEBUG << "Bytes received: " << iResult;
 			LOG_DEBUG << "Message: " << recvbuf;
 			
 			if (strlen(recvbuf) > 7)
