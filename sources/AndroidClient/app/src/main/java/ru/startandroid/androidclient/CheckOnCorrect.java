@@ -43,7 +43,7 @@ public class CheckOnCorrect
         if(username.length()>20)
             return "Username is too long";
 
-        pattern=Pattern.compile("((.*[\\(\\;\\:\\[\\]\\'\\(\\)\\/\\,\\+\\*\\?\\<\\>\\)]+))");
+        pattern=Pattern.compile("((.*[\\(\\;\\:\\[\\]\\'\\(\\)\\/\\,\\+\\*\\?\\<\\>\\ )]+))");
         Matcher m1=pattern.matcher(username);
 
         if(m1.lookingAt())
@@ -56,7 +56,7 @@ public class CheckOnCorrect
             return "Enter password";
         if(password.length()>128)
             return "Password is too long";
-        pattern=Pattern.compile("((.*[\\(\\;\\:\\[\\]\\'\\(\\)\\/\\,\\+\\*\\?\\<\\>\\)]+))");
+        pattern=Pattern.compile("((.*[\\(\\;\\:\\[\\]\\'\\(\\)\\/\\,\\+\\*\\?\\<\\>\\ )]+))");
         match=pattern.matcher(password);
         if(match.lookingAt())
            return "Wrong password format";

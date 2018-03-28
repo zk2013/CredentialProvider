@@ -1,12 +1,19 @@
 package ru.startandroid.androidclient;
 
+import android.content.ContentValues;
 import android.content.DialogInterface;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.support.design.widget.TextInputLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -14,37 +21,111 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    AlertDialog alert;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        pwEdit=(TextInputLayout)findViewById(R.id.textInputLayout);
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Status");
         builder.setCancelable(false);
         builder.setNeutralButton("Understood", new DialogInterface.OnClickListener() {public void onClick(DialogInterface dialog, int id) {
                                 dialog.cancel();}});
         alert = builder.create();
+
+        dbHelper = new DBHelper(this);
+         cv = new ContentValues();
+         db = dbHelper.getWritableDatabase();
+        login=new ArrayList();
+        DataEncrypt dataEncrypt1=new DataEncrypt();
+        String decrypt1=null;
+        Cursor c = db.query("mytable", null, null, null, null, null, null);
+        if (c.moveToFirst()) {
+            int nameColIndex1 = c.getColumnIndex("username");
+            do {
+            try {
+                decrypt1=dataEncrypt1.Decrypt(c.getString(nameColIndex1));
+
+            } catch (UnsupportedEncodingException e) {
+              e.printStackTrace();
+             }
+            login.add(decrypt1);
+             } while (c.moveToNext());
+        }
+        c.close();
+        unAutoText =(AutoCompleteTextView)findViewById(R.id.autoCompleteTextView1);
+        AutoArrayAdapter=new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,login);
+        unAutoText.setAdapter(AutoArrayAdapter);
+
+
+        unAutoText.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        DataEncrypt dataEncrypt=new DataEncrypt();
+        String decrypt=null;
+        String decpass=null;
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String str= parent.getItemAtPosition(position).toString();
+                // делаем запрос всех данных из таблицы mytable, получаем Cursor
+                Cursor c = db.query("mytable", null, null, null, null, null, null);
+                if (c.moveToFirst()) {
+                    int nameColIndex = c.getColumnIndex("username");
+                    int passwordColIndex = c.getColumnIndex("password");
+                    do {
+                        try {
+                            decrypt=dataEncrypt.Decrypt(c.getString(nameColIndex));
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+                        if(str.equals(decrypt))
+                        {
+                            try {
+                                decpass=dataEncrypt.Decrypt(c.getString(passwordColIndex));
+                            } catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                            }
+                            pwEdit.getEditText().setText(decpass);
+                        }
+                    } while (c.moveToNext());
+                }
+                c.close();
+            }
+        });
     }
 
+    public void CacheonClick(View cview) throws UnsupportedEncodingException
+    {
+        Cursor c = db.query("mytable", null, null, null, null, null, null);
+        if (c.moveToFirst()) {
+            db.delete("mytable", null, null);
+            login.clear();
+            AutoArrayAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_dropdown_item_1line, login);
+            unAutoText.setAdapter(AutoArrayAdapter);
+        }
+        else
+            ShowMessage("Data base is empty");
+    }
     public void MyonClick(View view)
     {
         String check="Correct";
 
         button=(Button)findViewById(R.id.button);
-        pwEdit=(TextInputLayout)findViewById(R.id.textInputLayout);
+
         password=pwEdit.getEditText().getText().toString();
 
         ipTextEdit=(TextInputLayout)findViewById(R.id.textInputLayout2);
         serIpAddress=ipTextEdit.getEditText().getText().toString();
 
-        unTextEdit=(TextInputLayout)findViewById(R.id.textInputLayout3);
-        username=unTextEdit.getEditText().getText().toString();
+
+        unEdit =(TextInputLayout)findViewById(R.id.textInputLayout6);
+        username= unAutoText.getText().toString();
 
 
         boolean fCorrectData=true;
@@ -67,17 +148,19 @@ public class MainActivity extends AppCompatActivity {
         error_username=checkOnCorrect.CorrectUsername(username);
         if(error_username!=check)
         {
-            unTextEdit.setErrorEnabled(true);
-            unTextEdit.setError(error_username);
+            unEdit.setErrorEnabled(true);
+            unEdit.setError(error_username);
             fCorrectData=false;
+
         }
         else
-            unTextEdit.setErrorEnabled(false);
+            unEdit.setErrorEnabled(false);
         error_password=checkOnCorrect.CorrectPassword(password);
         if(error_password!=check)
         {
             pwEdit.setErrorEnabled(true);
             pwEdit.setError(error_password);
+
             fCorrectData=false;
         }
         else
@@ -187,6 +270,7 @@ public class MainActivity extends AppCompatActivity {
                         switch (pMessage.GetID()) {
                             case ConstValues.ReadingError:
                                 rez=ConstValues.ReadingError;
+                                finish=true;
                                 break;
                             case ConstValues.UserInSystem:
                                 rez=ConstValues.UserInSystem;
@@ -201,6 +285,10 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                             case ConstValues.SuccessfulLogging:
                                 rez=ConstValues.SuccessfulLogging;
+                                finish=true;
+                                break;
+                            case ConstValues.PError:
+                                rez=ConstValues.PError;
                                 finish=true;
                                 break;
                         }
@@ -221,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Integer result) {
             super.onPostExecute(result);
             alert.setTitle("Status");
-            if(result==ConstValues.IncorrectCreds)
+            if(result==ConstValues.IncorrectCreds||result==ConstValues.PError)
             {
                 alert.setMessage("Incorrect username or password");
                 alert.setIcon(android.R.drawable.ic_notification_clear_all);
@@ -232,6 +320,7 @@ public class MainActivity extends AppCompatActivity {
                 alert.setMessage("Log in is successful");
                 alert.setIcon(android.R.drawable.ic_menu_info_details);
                 alert.show();
+                CacheCreds(unAutoText.getText().toString(),pwEdit.getEditText().getText().toString());
             }
             if(result==ConstValues.UserInSystem)
             {
@@ -254,8 +343,9 @@ public class MainActivity extends AppCompatActivity {
                 alert.show();
             }
             button.setEnabled(true);
-            ipTextEdit.getEditText().setText("");
-            unTextEdit.getEditText().setText("");
+            if(result!=ConstValues.IncorrectCreds)
+                ipTextEdit.getEditText().setText("");
+            unAutoText.setText("");
             pwEdit.getEditText().setText("");
         }
 
@@ -274,6 +364,46 @@ public class MainActivity extends AppCompatActivity {
             pMes.SetID(Integer.parseInt(new String(text,0,1)));
         }
     }
+
+    public void CacheCreds(String cusername, String cpassword)
+    {
+        DataEncrypt dataEncrypt=new DataEncrypt();
+        String decrypt=null;
+        boolean isCached=false;
+
+        // делаем запрос всех данных из таблицы mytable, получаем Cursor
+        Cursor c = db.query("mytable", null, null, null, null, null, null);
+        if(!cpassword.isEmpty() && !cusername.isEmpty()) {
+            if (c.moveToFirst()) {
+                int nameColIndex = c.getColumnIndex("username");
+                do {
+                    try {
+                        decrypt = dataEncrypt.Decrypt(c.getString(nameColIndex));
+                    } catch (UnsupportedEncodingException e) {
+                        e.printStackTrace();
+                    }
+                    if (cusername.equals(decrypt)) {
+                        isCached = true;
+                    }
+                } while (c.moveToNext());
+            }
+            c.close();
+
+            if(!isCached)
+            {
+                DataEncrypt encrypt = new DataEncrypt();
+                byte[] data = null;
+                data = encrypt.CryptingData(cusername);
+                cv.put("username", Base64.encodeToString(data, Base64.DEFAULT));
+                data = encrypt.CryptingData(cpassword);
+                cv.put("password", Base64.encodeToString(data, Base64.DEFAULT));
+                db.insert("mytable", null, cv);
+                login.add(cusername);
+                AutoArrayAdapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_dropdown_item_1line, login);
+                unAutoText.setAdapter(AutoArrayAdapter);
+            }
+        }
+    }
     private byte[] cryptdata=null;
     private String serIpAddress;
     private String username;
@@ -282,8 +412,16 @@ public class MainActivity extends AppCompatActivity {
 
     private TextInputLayout pwEdit;
     private TextInputLayout ipTextEdit;
-    private TextInputLayout unTextEdit;
     private Button button;
+
+    private AlertDialog alert;
+    private AutoCompleteTextView unAutoText;
+    private TextInputLayout unEdit;
+    private ArrayList login;
+    private DBHelper dbHelper;
+    private ContentValues cv;
+    private SQLiteDatabase db;
+    private ArrayAdapter<String> AutoArrayAdapter;
 }
 
 
