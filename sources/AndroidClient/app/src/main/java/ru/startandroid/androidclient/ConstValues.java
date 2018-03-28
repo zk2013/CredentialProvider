@@ -12,6 +12,7 @@ public class ConstValues {
     public static final int SendCreds=4;
     public static final int IncorrectCreds=5;
     public static final int SuccessfulLogging=6;
-    public static final int Error=7;
-    public static final int TimeOut=3000;
+    public static final int PError=7;
+    public static final int Error=8;
+    public static final int TimeOut=5000;
 }
