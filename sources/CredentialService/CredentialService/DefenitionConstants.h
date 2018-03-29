@@ -23,7 +23,7 @@
 #define CREDS 4
 #define FAIL 5
 #define SUCCESS 6
-
+#define PIPE 7
 
 #define BUFSIZE 512
 

@@ -139,7 +139,7 @@ struct Messages
 					case PIPE_ERROR:// fail pipe
 					{
 						LOG_DEBUG << "Connection error.Pipe error.";
-						ID = ERROR;
+						ID = PIPE;
 						break;
 					}
 				}
@@ -148,7 +148,7 @@ struct Messages
 		}
 		default:
 		{
-			ID = 0; // error
+			ID = ERROR; // error
 			break;
 		}
 		}
@@ -158,82 +158,102 @@ struct Messages
 		char *answer = nullptr;
 		switch (ID)
 		{
-		case BUSY://busy
-		{
-			answer = new char[LenData + 8];
-			answer[0] = '2';
-			answer[1] = '\0';
-			char lens_temp[3];
+			case BUSY://busy
+			{
+				answer = new char[LenData + 8];
+				answer[0] = '2';
+				answer[1] = '\0';
+				char lens_temp[3];
 
-			_itoa_s(LenData, lens_temp, 10);
-			if (LenData < 10)
-			{
-				strcat_s(answer, LenData + 8, "00");
-				answer[3] = '\0';
-				strcat_s(answer, LenData + 8, lens_temp);
-			}
-			else
-			{
-				if (LenData < 100)
+				_itoa_s(LenData, lens_temp, 10);
+				if (LenData < 10)
 				{
-					strcat_s(answer + 1, LenData + 8, "0");
-					answer[2] = '\0';
+					strcat_s(answer, LenData + 8, "00");
+					answer[3] = '\0';
 					strcat_s(answer, LenData + 8, lens_temp);
 				}
-			}
-			answer[4] = '\0';
-			_itoa_s(LenOriginal, lens_temp, 10);
-			if (LenData < 10)
-			{
-				strcat_s(answer, LenData + 8, "00");
-				answer[6] = '\0';
-				strcat_s(answer, LenData + 8, lens_temp);
-			}
-			else
-			{
-				if (LenData < 100)
+				else
 				{
-					strcat_s(answer + 1, LenData + 8, "0");
-					answer[5] = '\0';
+					if (LenData < 100)
+					{
+						strcat_s(answer + 1, LenData + 8, "0");
+						answer[2] = '\0';
+						strcat_s(answer, LenData + 8, lens_temp);
+					}
+				}
+				answer[4] = '\0';
+				_itoa_s(LenOriginal, lens_temp, 10);
+				if (LenData < 10)
+				{
+					strcat_s(answer, LenData + 8, "00");
+					answer[6] = '\0';
 					strcat_s(answer, LenData + 8, lens_temp);
 				}
+				else
+				{
+					if (LenData < 100)
+					{
+						strcat_s(answer + 1, LenData + 8, "0");
+						answer[5] = '\0';
+						strcat_s(answer, LenData + 8, lens_temp);
+					}
+				}
+				answer[7] = '\0';
+				strcat_s(answer, LenData + 8, data);
+				answer[LenData + 8] = '\0';
+				break;
 			}
-			answer[7] = '\0';
-			strcat_s(answer, LenData + 8, data);
-			answer[LenData + 8] = '\0';
-			break;
-		}
-		case FREE://free
-		{
-			answer = new char[2];
-			answer[0] = '3';
-			answer[1] = '\0';
-			break;
-		}
-		case FAIL://fail
-		{
-			answer = new char[2];
-			answer[0] = '5';
-			answer[1] = '\0';
-			break;
-		}
-		case SUCCESS://success
-		{
-			answer = new char[2];
-			answer[0] = '6';
-			answer[1] = '\0';
-			break;
-		}
-		case ERROR://error
-		{
-			answer = new char[2];
-			answer[0] = '0';
-			answer[1] = '\0';
-			break;
-		}
+			case FREE://free
+			{
+				answer = new char[2];
+				answer[0] = '3';
+				answer[1] = '\0';
+				break;
+			}
+			case FAIL://fail
+			{
+				answer = new char[2];
+				answer[0] = '5';
+				answer[1] = '\0';
+				break;
+			}
+			case SUCCESS://success
+			{
+				answer = new char[2];
+				answer[0] = '6';
+				answer[1] = '\0';
+				break;
+			}
+			case PIPE://error pipe
+			{
+				answer = new char[2];
+				answer[0] = '7';
+				answer[1] = '\0';
+				break;
+			}
+			case ERROR://error
+			{
+				answer = new char[2];
+				answer[0] = '0';
+				answer[1] = '\0';
+				break;
+			}
+			default: // something wrong
+			{
+				answer = new char[2];
+				answer[0] = '0';
+				answer[1] = '\0';
+				break;
+			}
 		}
 		return answer;
 	}
+	~Messages()
+	{
+		if(data)
+			delete [] data;
+	}
+private:
 	void Decrypt()
 	{
 		LOG_DEBUG << "data before decrypt: " << data;
@@ -250,12 +270,6 @@ struct Messages
 		data[LenOriginal] = '\0';
 		delete[]dec_out;
 		LOG_DEBUG << "data after decrypt: " << data;
-	}
-
-	~Messages()
-	{
-		if(data)
-			delete [] data;
 	}
 };
 
