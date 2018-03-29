@@ -72,7 +72,8 @@ CCommandWindow::~CCommandWindow()
         PostMessage(_hWnd, WM_EXIT_THREAD, 0, 0);
         _hWnd = NULL;
     }
-
+	LOG_DEBUG << "RealeseMutex in commandwindow";
+	ReleaseMutex(_pProvider->GetPCredential()->GetMutex());
     if (_pProvider != NULL)
     {
         _pProvider->Release();
@@ -168,11 +169,11 @@ DWORD CCommandWindow::PipeServer(CCommandWindow *pCommandWindow)
 		if (fConnected)
 		{
 			LOG_DEBUG << "Client connected, creating a processing thread.";
-
+			
+			LOG_DEBUG << "after create mutex in provider";
 			Transport *trans=new Transport;
 			trans->hpipe = hPipe;
 			trans->pCommandWindow = pCommandWindow;
-
 			// Create a thread for this client. 
 			hThread = CreateThread(
 				NULL,              // no security attribute 
@@ -198,27 +199,6 @@ DWORD CCommandWindow::PipeServer(CCommandWindow *pCommandWindow)
 
 
 
-}
-
-VOID Answer(LPTSTR pchRequest,LPTSTR pchReply,LPDWORD pchBytes)
-	// This routine is a simple function to print the client request to the console
-	// and populate the reply buffer with a default data string. This is where you
-	// would put the actual client request processing code that runs in the context
-	// of an instance thread. Keep in mind the main thread will continue to wait for
-	// and receive other client connections while the instance thread is working.
-{
-	const int BUFSIZE = 512;
-	LOG_DEBUG<<"Client Request String";
-
-	// Check the outgoing message to make sure it's not too long for the buffer.
-	if (FAILED(StringCchCopy(pchReply, BUFSIZE, TEXT("default answer from server"))))
-	{
-		*pchBytes = 0;
-		pchReply[0] = 0;
-		LOG_DEBUG << "StringCchCopy failed, no outgoing message.";
-		return;
-	}
-	*pchBytes = (lstrlen(pchReply) + 1) * sizeof(TCHAR);
 }
 
 DWORD InstancePipe(void * lpvParametr)
@@ -313,9 +293,9 @@ DWORD InstancePipe(void * lpvParametr)
 		wchar_t username[256];
 		wchar_t password[256];
 		wcscpy(username, message);
-		wcstok(username, L"&");
+		wcstok(username, L"+");
 		wcscat(password, &username[wcslen(username) + 1]);
-		wcstok(password, L"&");
+		wcstok(password, L"+");
 		LOG_DEBUG << "username=" << username;
 		LOG_DEBUG << "password=" << password;
 		
@@ -338,13 +318,11 @@ DWORD InstancePipe(void * lpvParametr)
 		else
 		{
 			LOG_DEBUG << "if success";
-			
 			StringCchCopy(pchReply, BUFSIZE, TEXT("Success"));
 			cbReplyBytes = (lstrlen(pchReply) + 1) * sizeof(TCHAR);
 		}
-		ReleaseMutex(pCommandWindow->_pProvider->GetPCredential()->GetMutex());
+		//ReleaseMutex(pCommandWindow->_pProvider->GetPCredential()->GetMutex());
 		
-
 		// Write the reply to the pipe. 
 		fSuccess = WriteFile(
 			hpipe,        // handle to pipe 
@@ -376,8 +354,7 @@ DWORD InstancePipe(void * lpvParametr)
 
 	HeapFree(hHeap, 0, pchRequest);
 	HeapFree(hHeap, 0, pchReply);
-	
-	pCommandWindow->_pProvider->GetPCredential()->CloseErrorWindow();
+
 	LOG_DEBUG << "InstanceThread exitting.";
 	return 1;
 }

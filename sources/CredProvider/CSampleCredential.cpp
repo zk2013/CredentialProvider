@@ -124,8 +124,10 @@ HRESULT CSampleCredential::UnAdvise()
 // selected, you would do it here.
 HRESULT CSampleCredential::SetSelected(__out BOOL* pbAutoLogon)
 {
-	
-	*pbAutoLogon = TRUE;
+	//f(incorrectCreds)
+		//*pbAutoLogon = FALSE;
+	//else
+		*pbAutoLogon = TRUE;
 	return S_OK;
 }
 
@@ -454,6 +456,7 @@ HRESULT CSampleCredential::ReportResult(
 		if (s_rgLogonStatusInfo[i].ntsStatus == ntsStatus && s_rgLogonStatusInfo[i].ntsSubstatus == ntsSubstatus)
 		{
 			dwStatusInfo = i;
+			LOG_DEBUG << "change dwStatusInfo=" << i;
 			break;
 		}
 	}
@@ -475,13 +478,16 @@ HRESULT CSampleCredential::ReportResult(
 			_pCredProvCredentialEvents->SetFieldString(this, SFI_USERNAME, L"");
 
 			incorrectCreds = true;
-			ReleaseMutex(mutex);
-			LOG_DEBUG << "after release mutex in credential";
-			SetErrorWindow(ppwszOptionalStatusText, pcpsiOptionalStatusIcon);
+
+			//*ppwszOptionalStatusText = NULL;
+			//*pcpsiOptionalStatusIcon = CPSI_NONE;
+			//SetErrorWindow(ppwszOptionalStatusText, pcpsiOptionalStatusIcon);
+
 			LOG_DEBUG << "in report result incorrectCreds=" << incorrectCreds;
 		}
 	}
-	
+	LOG_DEBUG << "after release mutex in credential";
+	ReleaseMutex(mutex);
 	LOG_DEBUG << "in report result finish";
 	
 	// Since NULL is a valid value for *ppwszOptionalStatusText and *pcpsiOptionalStatusIcon
@@ -500,6 +506,7 @@ void CSampleCredential::CloseErrorWindow()
 {
 	*StatusText = NULL;
 	*StatusIcon = CPSI_NONE;
+	LOG_DEBUG << "finish in closeerrorwindow";
 }
 
 
@@ -513,5 +520,5 @@ HANDLE CSampleCredential::GetMutex()
 }
 void CSampleCredential::SetMutex()
 {
-	this->mutex = CreateMutex(NULL, TRUE, L"my_mutex");
+	this->mutex = CreateMutex(NULL, TRUE, NULL);
 }
