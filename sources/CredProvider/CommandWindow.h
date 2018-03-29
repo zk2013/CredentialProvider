@@ -18,8 +18,6 @@
 
 struct Transport;
 
-VOID Answer(LPTSTR pchRequest, LPTSTR pchReply, LPDWORD pchBytes);
-
 DWORD InstancePipe(void* lpvParam);
 
 

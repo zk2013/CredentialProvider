@@ -36,8 +36,7 @@ CSampleProvider::CSampleProvider() :
 	_pCommandWindow = NULL;
 	_pCredential = NULL;
 	_pMessageCredential = NULL;
-	_UserName = NULL;
-	_Password = NULL;
+
 }
 
 CSampleProvider::~CSampleProvider()
@@ -130,11 +129,11 @@ HRESULT CSampleProvider::SetUsageScenario(
 						if (SUCCEEDED(hr))
 						{
 							
-							hr = _pCredential->InitCred(_cpus, s_rgCredProvFieldDescriptors, s_rgFieldStatePairs, L"", L"");
-							if (SUCCEEDED(hr))
-							{
+							//hr = _pCredential->InitCred(_cpus, s_rgCredProvFieldDescriptors, s_rgFieldStatePairs, L"", L"");
+							//if (SUCCEEDED(hr))
+							//{
 								hr = _pMessageCredential->Initialize(s_rgMessageCredProvFieldDescriptors, s_rgMessageFieldStatePairs,L"");
-							}
+							//}
 						}
 					}
 					else
