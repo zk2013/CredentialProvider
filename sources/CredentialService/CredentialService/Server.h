@@ -40,7 +40,7 @@ struct Messages
 	void InputData(char*text)
 	{
 		data = new char[LenData + 1];
-		//strncpy_s(result->data, text + 7, );
+
 		strcpy_s(data, LenData + 1, text);
 		data[LenData] = '\0';
 		if (LenOriginal > LenData)
@@ -105,7 +105,7 @@ struct Messages
 			}
 			break;
 		}
-		case 4://creds
+		case CREDS://creds
 		{
 			// check active session
 			LPTSTR ActiveSessionUserName = CheckActiveUser();
@@ -134,11 +134,13 @@ struct Messages
 					{
 						LOG_DEBUG << "Incorrect username or password";
 						ID = FAIL;
+						break;
 					}
 					case PIPE_ERROR:// fail pipe
 					{
 						LOG_DEBUG << "Connection error.Pipe error.";
-						ID = ERROR;
+						ID = PIPE;
+						break;
 					}
 				}
 			}
@@ -146,7 +148,7 @@ struct Messages
 		}
 		default:
 		{
-			ID = 0; // error
+			ID = ERROR; // error
 			break;
 		}
 		}
@@ -156,100 +158,118 @@ struct Messages
 		char *answer = nullptr;
 		switch (ID)
 		{
-		case BUSY://busy
-		{
-			answer = new char[LenData + 8];
-			answer[0] = '2';
-			answer[1] = '\0';
-			char lens_temp[3];
+			case BUSY://busy
+			{
+				answer = new char[LenData + 8];
+				answer[0] = '2';
+				answer[1] = '\0';
+				char lens_temp[3];
 
-			_itoa_s(LenData, lens_temp, 10);
-			if (LenData < 10)
-			{
-				strcat_s(answer, LenData + 8, "00");
-				answer[3] = '\0';
-				strcat_s(answer, LenData + 8, lens_temp);
-			}
-			else
-			{
-				if (LenData < 100)
+				_itoa_s(LenData, lens_temp, 10);
+				if (LenData < 10)
 				{
-					strcat_s(answer + 1, LenData + 8, "0");
-					answer[2] = '\0';
+					strcat_s(answer, LenData + 8, "00");
+					answer[3] = '\0';
 					strcat_s(answer, LenData + 8, lens_temp);
 				}
-			}
-			answer[4] = '\0';
-			_itoa_s(LenOriginal, lens_temp, 10);
-			if (LenData < 10)
-			{
-				strcat_s(answer, LenData + 8, "00");
-				answer[6] = '\0';
-				strcat_s(answer, LenData + 8, lens_temp);
-			}
-			else
-			{
-				if (LenData < 100)
+				else
 				{
-					strcat_s(answer + 1, LenData + 8, "0");
-					answer[5] = '\0';
+					if (LenData < 100)
+					{
+						strcat_s(answer + 1, LenData + 8, "0");
+						answer[2] = '\0';
+						strcat_s(answer, LenData + 8, lens_temp);
+					}
+				}
+				answer[4] = '\0';
+				_itoa_s(LenOriginal, lens_temp, 10);
+				if (LenData < 10)
+				{
+					strcat_s(answer, LenData + 8, "00");
+					answer[6] = '\0';
 					strcat_s(answer, LenData + 8, lens_temp);
 				}
+				else
+				{
+					if (LenData < 100)
+					{
+						strcat_s(answer + 1, LenData + 8, "0");
+						answer[5] = '\0';
+						strcat_s(answer, LenData + 8, lens_temp);
+					}
+				}
+				answer[7] = '\0';
+				strcat_s(answer, LenData + 8, data);
+				answer[LenData + 8] = '\0';
+				break;
 			}
-			answer[7] = '\0';
-			strcat_s(answer, LenData + 8, data);
-			answer[LenData + 8] = '\0';
-			break;
-		}
-		case FREE://free
-		{
-			answer = new char[2];
-			answer[0] = '3';
-			answer[1] = '\0';
-			break;
-		}
-		case FAIL://fail
-		{
-			answer = new char[2];
-			answer[0] = '5';
-			answer[1] = '\0';
-			break;
-		}
-		case SUCCESS://success
-		{
-			answer = new char[2];
-			answer[0] = '6';
-			answer[1] = '\0';
-			break;
-		}
-		case ERROR://error
-		{
-			answer = new char[2];
-			answer[0] = '0';
-			answer[1] = '\0';
-			break;
-		}
+			case FREE://free
+			{
+				answer = new char[2];
+				answer[0] = '3';
+				answer[1] = '\0';
+				break;
+			}
+			case FAIL://fail
+			{
+				answer = new char[2];
+				answer[0] = '5';
+				answer[1] = '\0';
+				break;
+			}
+			case SUCCESS://success
+			{
+				answer = new char[2];
+				answer[0] = '6';
+				answer[1] = '\0';
+				break;
+			}
+			case PIPE://error pipe
+			{
+				answer = new char[2];
+				answer[0] = '7';
+				answer[1] = '\0';
+				break;
+			}
+			case ERROR://error
+			{
+				answer = new char[2];
+				answer[0] = '0';
+				answer[1] = '\0';
+				break;
+			}
+			default: // something wrong
+			{
+				answer = new char[2];
+				answer[0] = '0';
+				answer[1] = '\0';
+				break;
+			}
 		}
 		return answer;
-	}
-	void Decrypt()
-	{
-		unsigned char key[17] = DECRYPTION_KEY;
-		unsigned char *dec_out = new unsigned char[LenData];
-		AES_KEY dec_key;
-		AES_set_decrypt_key(key, 128, &dec_key);
-		AES_decrypt((unsigned char*)data, dec_out, &dec_key);
-		dec_out[LenOriginal] = '\0';
-		delete[]data;
-		data = new char[LenData + 1];
-		strcpy_s(data, LenOriginal + 1, (char*)dec_out);
-		data[LenOriginal] = '\0';
-		delete[]dec_out;
 	}
 	~Messages()
 	{
 		if(data)
 			delete [] data;
+	}
+private:
+	void Decrypt()
+	{
+		LOG_DEBUG << "data before decrypt: " << data;
+		unsigned char key[17] = DECRYPTION_KEY;
+		unsigned char *dec_out = new unsigned char[LenData];
+		AES_KEY dec_key;
+		AES_set_decrypt_key(key, 128, &dec_key);
+		for (int i = 0; i < LenData; i += 16)
+			AES_decrypt((unsigned char*)data + i, dec_out + i, &dec_key);
+		dec_out[LenOriginal] = '\0';
+		delete[]data;
+		data = new char[LenOriginal + 1];
+		strcpy_s(data, LenOriginal + 1, (char*)dec_out);
+		data[LenOriginal] = '\0';
+		delete[]dec_out;
+		LOG_DEBUG << "data after decrypt: " << data;
 	}
 };
 
@@ -392,7 +412,7 @@ DWORD WINAPI InstanceServer(void* param)
 		if (iResult > 0)
 		{
 			recvbuf[iResult] = '\0';
-			LOG_DEBUG << "Bytes received " << recvbuflen;
+			LOG_DEBUG << "Bytes received: " << iResult;
 			LOG_DEBUG << "Message: " << recvbuf;
 			
 			if (strlen(recvbuf) > 7)
